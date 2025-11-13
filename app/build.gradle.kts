@@ -96,6 +96,16 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
     
+    // Accompanist for utilities
+    implementation("com.google.accompanist:accompanist-drawablepainter:0.32.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    
+    // DataStore for preferences
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    
+    // Security/Encryption
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
