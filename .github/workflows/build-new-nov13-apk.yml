@@ -1,0 +1,96 @@
+name: Build New-Nov_13 APK
+
+on:
+  push:
+    branches: [ New-Nov_13 ]
+  pull_request:
+    branches: [ New-Nov_13 ]
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # clear Gradle cache
+      - name: Clear Gradle cache
+        run: |
+          echo " Clearing Gradle caches..."
+          rm -rf ~/.gradle/caches/
+          rm -rf ~/.gradle/wrapper/
+
+      # checkout source
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: New-Nov_13
+
+      # setup JDK 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: 'stable'
+
+      # restore Flutter packages
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # decode Keystore
+      - name: Decode Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p android/app
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/my-release-key.jks
+          echo "✅ Keystore written to android/app/my-release-key.jks"
+
+      # debug Keystore
+      - name: Debug Keystore
+        run: |
+          ls -l android/app
+          keytool -list -v -keystore android/app/my-release-key.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" || true
+
+      # build release APK
+      - name: Build release APK (play flavor, arm64)
+        env:
+          AVES_STORE_FILE: my-release-key.jks
+          AVES_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          AVES_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          AVES_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          AVES_GOOGLE_API_KEY: ""
+        run: |
+          flutter build apk --release --flavor play -t lib/main_play.dart --target-platform android-arm64
+
+      # upload artifact
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aves-new-nov13-play-arm64-release
+          path: build/app/outputs/flutter-apk/app-play-release.apk
+
+      # create release info
+      - name: Create build info
+        run: |
+          echo "# Build Information" > build-info.txt
+          echo "Branch: New-Nov_13" >> build-info.txt
+          echo "Build Date: $(date)" >> build-info.txt
+          echo "Flutter Version: 3.27.4" >> build-info.txt
+          echo "Features: OCR with Hold Gesture" >> build-info.txt
+          echo "Target: android-arm64" >> build-info.txt
+          echo "Flavor: play" >> build-info.txt
+
+      # upload build info
+      - name: Upload build info
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build-info.txt
+
