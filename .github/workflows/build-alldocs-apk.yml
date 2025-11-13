@@ -1,0 +1,74 @@
+name: Build AllDocs FileManager APK
+
+on:
+  push:
+    branches: [ feature/initial-app-plan ]
+  pull_request:
+    branches: [ feature/initial-app-plan ]
+  workflow_dispatch: # Manual trigger allowed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Clear Gradle cache
+      - name: Clear Gradle cache
+        run: |
+          echo "Clearing Gradle caches..."
+          rm -rf ~/.gradle/caches/
+          rm -rf ~/.gradle/wrapper/
+
+      # Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: feature/initial-app-plan
+
+      # Setup JDK 17
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.27.4
+          channel: stable
+
+      # Restore flutter dependencies
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # Build release APK
+      - name: Build release APK (main flavor, arm64)
+        run: |
+          flutter build apk --release --target-platform android-arm64
+
+      # Upload APK artifact
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alldocs-filemanager-arm64-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Create build info file
+      - name: Create build info
+        run: |
+          echo "# Build Information" > build-info.txt
+          echo "Branch: feature/initial-app-plan" >> build-info.txt
+          echo "Build Date: $(date)" >> build-info.txt
+          echo "Flutter Version: 3.27.4" >> build-info.txt
+          echo "Target: android-arm64" >> build-info.txt
+          echo "Flavor: main" >> build-info.txt
+
+      # Upload build info
+      - name: Upload build info
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build-info.txt
+
